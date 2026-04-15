@@ -52,4 +52,8 @@ public class TaskController {
                            Authentication authentication) {
         return taskService.assignTask(id, userId, authentication);
     }
+    @GetMapping("/test")
+    public String test() {
+        return "WORKING";
+    }
 }
