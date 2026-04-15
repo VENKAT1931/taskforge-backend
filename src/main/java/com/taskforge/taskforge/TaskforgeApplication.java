@@ -3,7 +3,7 @@ package com.taskforge.taskforge;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.taskforge.taskforge")
 public class TaskforgeApplication {
 
 	public static void main(String[] args) {
