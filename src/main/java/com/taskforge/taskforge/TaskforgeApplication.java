@@ -9,5 +9,4 @@ public class TaskforgeApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(TaskforgeApplication.class, args);
 	}
-
 }
