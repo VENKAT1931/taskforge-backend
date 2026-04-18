@@ -1,55 +1,79 @@
 package com.taskforge.taskforge.config;
 
+import com.taskforge.taskforge.service.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.Arrays;
 
 @Configuration
 public class SecurityConfig {
 
+    private final JwtAuthenticationFilter jwtRequestFilter;
+    private final CustomUserDetailsService customUserDetailsService;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtRequestFilter, CustomUserDetailsService customUserDetailsService) {
+        this.jwtRequestFilter = jwtRequestFilter;
+        this.customUserDetailsService = customUserDetailsService;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // 🔥 ADMIN ONLY
-                        .requestMatchers("/tasks").hasRole("ADMIN")      // POST create
-                        .requestMatchers("/tasks/").hasRole("ADMIN")     // safety
-                        .requestMatchers("/tasks/all").hasRole("ADMIN")  // optional future
-
-                        // 🔥 USER + ADMIN
-                        .requestMatchers("/tasks/my").authenticated()
-
-                        // 🔥 GET ALL TASKS (ADMIN only)
+                        .requestMatchers("/auth/**", "/users/**").permitAll() // Allow auth & signup
                         .requestMatchers("/tasks").hasRole("ADMIN")
-
-                        .anyRequest().permitAll()
+                        .requestMatchers("/tasks/").hasRole("ADMIN")
+                        .requestMatchers("/tasks/all").hasRole("ADMIN")
+                        .requestMatchers("/tasks/my").authenticated()
+                        .anyRequest().authenticated()
                 )
-                .httpBasic(httpBasic -> {});
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // 🔥 In-memory users for testing
     @Bean
-    public UserDetailsService userDetailsService() {
-        return new InMemoryUserDetailsManager(
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(customUserDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
+    }
 
-                User.withUsername("venkat31v@gmail.com")
-                        .password("{noop}admin123")
-                        .roles("ADMIN")
-                        .build(),
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
+    }
 
-                User.withUsername("user")
-                        .password("{noop}user123")
-                        .roles("USER")
-                        .build()
-        );
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
