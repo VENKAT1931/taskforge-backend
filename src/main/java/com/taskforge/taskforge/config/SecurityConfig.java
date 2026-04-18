@@ -34,11 +34,17 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/users/**").permitAll() // Allow auth & signup
-                        .requestMatchers("/tasks").hasRole("ADMIN")
-                        .requestMatchers("/tasks/").hasRole("ADMIN")
-                        .requestMatchers("/tasks/all").hasRole("ADMIN")
+                        .requestMatchers("/auth/**", "/users/**").permitAll()
+
+                        // 🔥 IMPORTANT: allow test endpoint
+                        .requestMatchers("/tasks/test", "/").permitAll()
+
+                        // ADMIN routes
+                        .requestMatchers("/tasks/**").hasRole("ADMIN")
+
+                        // user routes
                         .requestMatchers("/tasks/my").authenticated()
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
