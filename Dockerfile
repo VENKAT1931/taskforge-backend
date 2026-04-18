@@ -15,6 +15,6 @@ RUN chmod +x mvnw
 
 # Build the project
 RUN ./mvnw clean package -DskipTests
-
+EXPOSE 8080
 # Run the app
 CMD ["java", "-jar", "target/taskforge-0.0.1-SNAPSHOT.jar"]
